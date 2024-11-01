@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MySnap - Réseau Social</title>
+    <style>
+        /* Styles de base */
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f0f0f0; /* Fond clair */
+            color: #333; /* Texte sombre */
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Barre de navigation */
+        .navbar {
+            background-color: #ff4757; /* Rouge vif */
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .navbar h1 {
+            color: #ffffff;
+            margin: 0;
+            font-size: 24px;
+        }
+
+        /* Zone de chat */
+        .chat-box {
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 15px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Messages */
+        .message {
+            background-color: #e0e0e0;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 15px;
+            max-width: 75%;
+            position: relative;
+            word-wrap: break-word;
+        }
+
+        .message.user {
+            background-color: #ff4757; /* Couleur pour les messages de l'utilisateur */
+            color: #ffffff;
+            margin-left: auto; /* Aligner à droite */
+        }
+
+        .message img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin-top: 5px;
+        }
+
+        /* Zone de saisie */
+        .input-area {
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background-color: #ffffff;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 25px;
+            border: 1px solid #ddd;
+        }
+
+        /* Boutons */
+        .btn {
+            background-color: #ff4757;
+            color: #ffffff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #e84118;
+        }
+
+        /* Formulaire */
+        .form-container {
+            display: flex;
+            flex-direction: column;
+            width: 300px;
+            margin: 100px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-container input {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Barre de navigation -->
+    <header class="navbar">
+        <h1>MySnap</h1>
+    </header>
+
+    <!-- Formulaire d'inscription/connexion -->
+    <div id="auth-form" class="form-container">
+        <h2 id="form-title">Connexion</h2>
+        <input type="text" id="username" placeholder="Nom d'utilisateur" required />
+        <input type="password" id="password" placeholder="Mot de passe" required />
+        <button class="btn" id="submit-btn" onclick="handleAuth()">Se connecter</button>
+        <p id="toggle-link" style="text-align:center; cursor:pointer; color: #ff4757;">Créer un compte</p>
+    </div>
+
+    <!-- Zone de chat -->
+    <main id="chat-area" style="display:none;">
+        <div class="chat-box" id="chat-box"></div>
+        <div class="input-area">
+            <input type="text" id="message-input" placeholder="Écris ton message..." />
+            <button class="btn" onclick="sendMessage()">Envoyer</button>
+            <button class="btn" onclick="takePhoto()">Prendre une photo</button>
+        </div>
+    </main>
+
+    <!-- Élément de capture de photo -->
+    <input type="file" id="camera" accept="image/*" style="display:none;" capture="camera" onchange="previewPhoto(event)" />
+
+    <script>
+        // Stockage des utilisateurs
+        const users = JSON.parse(localStorage.getItem('users')) || [];
+        let currentUser = null;
+
+        // Fonction pour gérer l'authentification
+        function handleAuth() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const isRegistering = document.getElementById('form-title').innerText === 'Créer un compte';
+
+            if (isRegistering) {
+                // Inscription
+                if (users.find(user => user.username === username)) {
+                    alert("Ce nom d'utilisateur est déjà pris.");
+                    return;
+                }
+                users.push({ username, password });
+                localStorage.setItem('users', JSON.stringify(users));
+                alert("Inscription réussie !");
+            } else {
+                // Connexion
+                currentUser = users.find(user => user.username === username && user.password === password);
+                if (currentUser) {
+                    document.getElementById('auth-form').style.display = 'none';
+                    document.getElementById('chat-area').style.display = 'block';
+                    document.getElementById('form-title').innerText = 'Bienvenue ' + currentUser.username;
+                } else {
+                    alert("Nom d'utilisateur ou mot de passe incorrect.");
+                }
+            }
+
+            // Réinitialiser les champs
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+
+        // Fonction pour envoyer un message texte
+        function sendMessage() {
+            const messageInput = document.getElementById('message-input');
+            const messageText = messageInput.value.trim();
+
+            if (messageText) {
+                // Créer un nouvel élément de message
+                const messageElement = document.createElement('div');
+                messageElement.classList.add('message', 'user'); // Ajouter classe pour style
+                messageElement.textContent = messageText;
+
+                // Ajouter le message à la zone de chat
+                document.getElementById('chat-box').appendChild(messageElement);
+
+                // Vider le champ de saisie
+                messageInput.value = '';
+                messageInput.focus();
+
+                // Faire défiler jusqu'en bas
+                const chatBox = document.getElementById('chat-box');
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        }
+
+        // Fonction pour prendre une photo
+        function takePhoto() {
+            document.getElementById('camera').click();
+        }
+
+        // Prévisualiser et envoyer la photo
+        function previewPhoto(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function() {
+                // Créer un nouvel élément de message avec l'image
+                const messageElement = document.createElement('div');
+                messageElement.classList.add('message', 'user'); // Ajouter classe pour style
+
+                const imgElement = document.createElement('img');
+                imgElement.src = reader.result;
+
+                // Ajouter l'image au message
+                messageElement.appendChild(imgElement);
+                document.getElementById('chat-box').appendChild(messageElement);
+
+                // Faire défiler jusqu'en bas
+                const chatBox = document.getElementById('chat-box');
+                chatBox.scrollTop = chatBox.scrollHeight;
+            };
+            reader.readAsDataURL(file); // Lire le fichier image
+        }
+
+        // Changer entre inscription et connexion
+        document.getElementById('toggle-link').onclick = function() {
+            const isRegistering = document.getElementById('form-title').innerText === 'Créer un compte';
+            document.getElementById('form-title').innerText = isRegistering ? 'Connexion' : 'Créer un compte';
+            document.getElementById('submit-btn').innerText = isRegistering ? 'Se connecter' : 'S’inscrire';
+            document.getElementById('toggle-link').innerText = isRegistering ? 'Déjà un compte ?' : 'Créer un compte';
+        }
+    </script>
+</body>
+</html>
